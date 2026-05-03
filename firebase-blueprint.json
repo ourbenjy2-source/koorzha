@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "Report": {
+      "title": "Report",
+      "description": "A public denunciation or case shared by a user.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "The content of the report." },
+        "authorId": { "type": "string", "description": "UID of the user who posted." },
+        "authorName": { "type": "string", "description": "Name of the user." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likesCount": { "type": "integer" },
+        "dislikesCount": { "type": "integer" },
+        "fakeReportCount": { "type": "integer" }
+      },
+      "required": ["text", "authorId", "authorName", "createdAt", "likesCount", "dislikesCount", "fakeReportCount"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a report.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "authorId", "authorName", "createdAt"]
+    },
+    "Vote": {
+      "title": "Vote",
+      "description": "Tracking likes, dislikes, and fake report flags.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["like", "dislike", "fake"] }
+      },
+      "required": ["userId", "type"]
+    }
+  },
+  "firestore": {
+    "reports": {
+      "schema": "Report",
+      "description": "Collection of community reports."
+    },
+    "reports/{reportId}/comments": {
+      "schema": "Comment",
+      "description": "Comments attached to a specific report."
+    },
+    "reports/{reportId}/votes": {
+      "schema": "Vote",
+      "description": "Individual votes for likes, dislikes, or fake report marking."
+    }
+  }
+}

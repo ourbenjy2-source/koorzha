@@ -1,0 +1,9 @@
+{
+  "name": "LegisPanamá",
+  "description": "Asistente legal especializado en la legislación de la República de Panamá, proporcionando información detallada sobre leyes, códigos y procedimientos administrativos.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

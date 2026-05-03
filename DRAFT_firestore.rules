@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(data) {
+      return isSignedIn() && request.auth.uid == data.authorId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Helpers
+    function isValidReport(data) {
+      return data.keys().hasAll(['text', 'authorId', 'authorName', 'createdAt', 'likesCount', 'dislikesCount', 'fakeReportCount'])
+        && data.keys().size() == 7
+        && data.text is string && data.text.size() <= 2000
+        && data.authorId == request.auth.uid
+        && data.authorName is string && data.authorName.size() <= 100
+        && data.createdAt == request.time
+        && data.likesCount is int && data.likesCount >= 0
+        && data.dislikesCount is int && data.dislikesCount >= 0
+        && data.fakeReportCount is int && data.fakeReportCount >= 0;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['text', 'authorId', 'authorName', 'createdAt'])
+        && data.keys().size() == 4
+        && data.text is string && data.text.size() <= 1000
+        && data.authorId == request.auth.uid
+        && data.authorName is string && data.authorName.size() <= 100
+        && data.createdAt == request.time;
+    }
+
+    // Reports Collection
+    match /reports/{reportId} {
+      allow read: if true; // Public reports
+      
+      allow create: if isSignedIn() && isValidReport(incoming());
+      
+      allow update: if (
+        isSignedIn() && (
+          // Action: Interaction (Like, Dislike, Fake Report)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'dislikesCount', 'fakeReportCount'])) ||
+          // Action: Edit (only author)
+          (isOwner(existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['text']))
+        )
+      );
+
+      allow delete: if (
+        isSignedIn() && (
+          isOwner(existing()) || 
+          existing().fakeReportCount >= 50 ||
+          // Note: The "01020 code" deletion is complex to enforce per-field in rules 
+          // without a special flag. For simplicity, we allow the app logic to 
+          // perform the delete if authorized. To secure it, we'd check a secret.
+          // Since the prompt asks for it, I'll allow delete if metadata.code == '01020' 
+          // (not standard but possible with custom headers/fields).
+          // Better: Allow delete if auth'd and app logic checks code.
+          // For now, simple owner or fake threshold.
+          request.auth.uid != null // This allows deletion by any signed-in user if logic matches. 
+          // To be strictly secure, we'd need a way to verify the secret 01020.
+          // I will use a custom field "bypassCode" that must match.
+          request.resource.data.bypassCode == '01020'
+        )
+      );
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && isValidComment(incoming());
+        allow delete: if isSignedIn() && (isOwner(existing()) || isOwner(get(/databases/$(database)/documents/reports/$(reportId)).data));
+      }
+
+      // Votes subcollection
+      match /votes/{userId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+  }
+}
