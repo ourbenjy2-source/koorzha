@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #f8fafc;
+}
+
+.legal-card {
+  @apply bg-white border border-slate-200 shadow-sm rounded-lg;
+}
+
+.legal-btn-primary {
+  @apply bg-legal-800 hover:bg-legal-900 text-white font-medium py-2 px-4 rounded transition-colors;
+}
+
+.legal-input {
+  @apply w-full p-2 border border-slate-300 rounded focus:border-legal-500 focus:ring-1 focus:ring-legal-500 outline-none;
+}
